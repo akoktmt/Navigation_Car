@@ -1,0 +1,2 @@
+../GPS_Handle/GPS.c:28:5:decodeGGA	24
+../GPS_Handle/GPS.c:192:5:decodeRMC	15
