@@ -24,3 +24,4 @@
 "./GPS_Handle/GPS.o"
 "./GPS_Handle/GPS_Handle.o"
 "./LKF/LKF.o"
+"./LKF/math.o"

@@ -1,6 +1,7 @@
-../LKF/LKF.c:11:6:transposeMatrix	24	static
-../LKF/LKF.c:19:6:matrixMultiplication	48	static
-../LKF/LKF.c:30:6:EKF_Init	16	static
-../LKF/LKF.c:64:6:GPS_Init	16	static
-../LKF/LKF.c:81:6:EKF_PredictionStep	360	static
-../LKF/LKF.c:131:6:EFK_GPSHandleMeasurement	320	static
+../LKF/LKF.c:12:6:multiplyMatrices	48	static
+../LKF/LKF.c:24:6:transposeMatrix	32	static
+../LKF/LKF.c:32:6:EKF_Init	16	static
+../LKF/LKF.c:71:6:GPS_Init	16	static
+../LKF/LKF.c:88:6:EKF_PredictionStep	512	static
+../LKF/LKF.c:167:6:EFK_GPSHandleMeasurement	216	static
+../LKF/LKF.c:198:6:Heading_HandleMeasurement	112	static

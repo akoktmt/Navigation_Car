@@ -10,66 +10,76 @@
 
 #define LENGTH_REAR 10
 #define LENGTH_CAR 20
-#define SIZE 5
-#define NUMBEROFMODLE 5
+#define SIZE 6
+#define NUMBEROFMODLE 6
 #define PI 3.141592
 typedef struct{
 	float FriPx;
 	float FriPy;
-	float FriVel;
+	float FriVelx;
+	float FriVely;
 	float FriHea;
 	float FriStee;
 
 	float NexPx;
 	float NexPy;
-	float NexVel;
+	float NexVelx;
+	float NexVely;
 	float NexHea;
 	float NexStee;
 
 	float CovPx;
 	float CovPy;
-	float CovVel;
+	float CovVelx;
+	float CovVely;
 	float CovHea;
 	float CovStee;
 
 	float Prediction_CovarianceNex[NUMBEROFMODLE][NUMBEROFMODLE];
 	float Prediction_CovarianceFri[NUMBEROFMODLE][NUMBEROFMODLE];
-	float Jacobian[NUMBEROFMODLE][NUMBEROFMODLE];
-	 //inovation
 }LKF;
 
 typedef struct {
-	float Measurement_Covariance;
-	float Jacobian[NUMBEROFMODLE];
-	float Jacobian_Covariance;
-	float Inovation[NUMBEROFMODLE];
-}Measurement_Inovation;
-
-typedef struct {
-	float Vel;
+	float Velx;
+	float Vely;
+	float Velz;
 	float Stee;
-	float Hea;
+	float Head;
+	float Accx;
+	float Accy;
+	float Accz;
 	float Time;
-	float Acceleration;
 }Input;
 
 typedef struct{
 	float AngleBeta;
-	float AngleTheta;
+	float Roll;
+	float Pitch;
+	float Yaw;
 }Angle;
 
 typedef struct{
-	float GPSGetPosition[2][2];
+	float GPSGetPosition[2];
 	float GPSCovariance[2][2];
-	uint8_t GPS_Model[NUMBEROFMODLE][NUMBEROFMODLE];
+	uint8_t GPS_Model[2][NUMBEROFMODLE];
 }GPS;
 
-void transposeMatrix(float mat[SIZE][SIZE], float result[SIZE][SIZE]);
+typedef struct{
+	float Yaw;
+	float Covariane;
+}Heading;
+
+void transposeMatrixNxM(int row, int col, float mat[row][col], float trans[col][row]);
+void transposeMatrixNxN(float mat[SIZE][SIZE], float result[SIZE][SIZE]);
 void matrixMultiplication(float mat1[SIZE][SIZE], float mat2[SIZE][SIZE], float result[SIZE][SIZE]);
 void EKF_Init(LKF *LKF,Input *Input);
 void GPS_Init(GPS *GPS);
 void EKF_PredictionStep(LKF *LKF, Angle *Angle, Input *Input);
 void EFK_GPSHandleMeasurement(GPS *GPS, LKF *LKF );
+void assignMatrix(float source[SIZE][SIZE], float destination[SIZE][SIZE], float rows, float cols);
+void subtractMatrices(float mat1[SIZE][SIZE], float mat2[SIZE][SIZE], float result[SIZE][SIZE], int rows, int cols);
+void addScalarToMatrix(int rows,int cols,float matrix[rows][cols], float scalar);
+
 
 #endif /* LKF_H_ */
 

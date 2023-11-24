@@ -8,21 +8,23 @@
 #include <string.h>
 #include <math.h>
 #include "LKF.h"
-void transposeMatrix(float mat[SIZE][SIZE], float result[SIZE][SIZE]) {
-    for (uint8_t i = 0; i < SIZE; i++) {
-        for (uint8_t j = 0; j < SIZE; j++) {
-            result[j][i] = mat[i][j];
+
+void multiplyMatrices(float firstMatrix[SIZE][SIZE], float secondMatrix[SIZE][SIZE], float result[SIZE][SIZE], int row, int col) {
+    // Thực hiện phép nhân
+    for (int i = 0; i < row; ++i) {
+        for (int j = 0; j < col; ++j) {
+            result[i][j] = 0;
+            for (int k = 0; k < col; ++k) {
+                result[i][j] += firstMatrix[i][k] * secondMatrix[k][j];
+            }
         }
     }
 }
 
-void matrixMultiplication(float mat1[SIZE][SIZE], float mat2[SIZE][SIZE], float result[SIZE][SIZE]) {
-    for (uint8_t i = 0; i < SIZE; i++) {
-        for (uint8_t j = 0; j < SIZE; j++) {
-            result[i][j] = 0;
-            for (uint8_t k = 0; k < SIZE; k++) {
-                result[i][j] += mat1[i][k] * mat2[k][j];
-            }
+void transposeMatrix(float matrix[SIZE][SIZE], float result[SIZE][SIZE], int row, int col) {
+    for (int i = 0; i < row; ++i) {
+        for (int j = 0; j < col; ++j) {
+            result[j][i] = matrix[i][j];
         }
     }
 }
@@ -32,33 +34,38 @@ void EKF_Init(LKF *LKF,Input *Input)
 //First Step
 	LKF->FriPx= 106.802343;  //input
 	LKF->FriPy=10.869826; //input
-	LKF->FriVel=5; //input
+	LKF->FriVelx=0; //input
+ 	LKF->CovVely=0; //input
 	LKF->FriHea=-PI/6; //input
 	LKF->FriStee=PI/6; //input
 //Next Step
 	LKF->NexPx=0;
 	LKF->NexPy=0;
-	LKF->NexVel=0;
+	LKF->NexVelx=0;
+	LKF->NexVely=0;
 	LKF->NexHea=0;
 	LKF->NexStee=0;
 //Covariance
 	LKF->CovPx=0; //input
 	LKF->CovPy=0; //input
-	LKF->CovVel=0; //input
+	LKF->CovVelx=0;//input
+	LKF->CovVely=0;//input
 	LKF->CovHea=0; //input
 	LKF->CovStee=0; //input
 //FirstIput
-	Input->Acceleration=0.2; //input
+	Input->Accx=0.2;
+	Input->Accy=0.2;
+	Input->Accz=0.2;
 	Input->Time=0.1; //input
 //Covariance
 	memset(LKF->Prediction_CovarianceNex,0,sizeof(LKF->Prediction_CovarianceNex));
 	memset(LKF->Prediction_CovarianceFri,0,sizeof(LKF->Prediction_CovarianceFri));
-
 	LKF->Prediction_CovarianceFri[0][0]= LKF->CovPx;
-	LKF->Prediction_CovarianceFri[0][0]= LKF->CovPy;
-	LKF->Prediction_CovarianceFri[0][0]= LKF->CovVel;
-	LKF->Prediction_CovarianceFri[0][0]= LKF->CovHea;
-	LKF->Prediction_CovarianceFri[0][0]= LKF->CovStee;
+	LKF->Prediction_CovarianceFri[1][1]= LKF->CovPy;
+	LKF->Prediction_CovarianceFri[2][2]= LKF->CovVelx;
+	LKF->Prediction_CovarianceFri[3][3]= LKF->CovVely;
+	LKF->Prediction_CovarianceFri[4][4]= LKF->CovHea;
+	LKF->Prediction_CovarianceFri[5][5]= LKF->CovStee;
 }
 
 void GPS_Init(GPS *GPS){
@@ -70,9 +77,9 @@ void GPS_Init(GPS *GPS){
 	GPS->GPSCovariance[0][0]=0; //input fromsensor
 	GPS->GPSCovariance[1][1]=0; //input fromsensor
 
-	GPS->GPSGetPosition[0][0]=106.802343; //input fromsensor
+	GPS->GPSGetPosition[0]=106.802343; //input fromsensor
 
-	GPS->GPSGetPosition[1][1]=10.869826;//input fromsensor
+	GPS->GPSGetPosition[1]=10.869826;//input fromsensor
 
 	GPS->GPS_Model[0][0]=1;
 	GPS->GPS_Model[1][1]=1;
@@ -80,16 +87,29 @@ void GPS_Init(GPS *GPS){
 }
 void EKF_PredictionStep(LKF *LKF, Angle *Angle, Input *Input){
 // Prediction State
+	float a_hx;
+	float a_hy;
+
+	 a_hx = Input->Accx * cos(Angle->Pitch) + Input->Accy * sin(Angle->Roll) * sin(Angle->Pitch) + Input->Accz * cos(Angle->Roll) * sin(Angle->Pitch);
+	 a_hy = Input->Accy * cos(Angle->Roll) - Input->Accz * sin(Angle->Roll);
+
 	 Angle->AngleBeta= (atan(LENGTH_REAR*tan(LKF->FriStee))/LENGTH_CAR);
-	 LKF->NexPx= LKF->FriPx + (LKF->FriVel*0.1 * cos(Angle->AngleBeta+LKF->FriHea))*Input->Time*0.0001;
-	 LKF->NexPy= LKF->FriPy + (LKF->FriVel*0.1 * sin(Angle->AngleBeta +LKF->FriHea))*Input->Time*0.0001;
-	 LKF->NexVel= LKF->FriVel + Input->Acceleration *Input->Time*0.1;
-	 LKF->NexHea= LKF->FriHea + ((LKF->FriVel*tan(LKF->FriStee)*cos(Angle->AngleBeta))/LENGTH_CAR)*Input->Time*0.1;
-	 LKF->NexStee = LKF->FriStee + Input->Stee*Input->Time*0.1;
+
+	 LKF->NexPx= LKF->FriPx + (LKF->FriVelx * cos(Angle->AngleBeta+LKF->FriHea))*Input->Time;
+
+	 LKF->NexPy= LKF->FriPy + (LKF->FriVely * sin(Angle->AngleBeta +LKF->FriHea))*Input->Time;
+
+	 LKF->NexVelx= LKF->FriVelx + a_hx *Input->Time;
+
+	 LKF->NexVely= LKF->FriVely + a_hy *Input->Time;
+
+	 LKF->NexHea= LKF->FriHea + ((LKF->FriVely*tan(LKF->FriStee)*cos(Angle->AngleBeta))/LENGTH_CAR)*Input->Time;
+
+	 LKF->NexStee= LKF->FriStee + Input->Stee*Input->Time;
 // Prediction Covariance
-	 float Mul_Result[5][5];
-	 float Trans_Result[5][5];
-	 float Jacobian[5][5];
+	 float Mul_Result[6][6];
+	 float Trans_Result[6][6];
+	 float Jacobian[6][6];
 
 	 memset(Trans_Result,0,sizeof(Trans_Result));
 	 memset(Jacobian,0,sizeof(Jacobian));
@@ -97,90 +117,173 @@ void EKF_PredictionStep(LKF *LKF, Angle *Angle, Input *Input){
 	 Jacobian[0][0]=1;
 	 Jacobian[0][1]=0;
 	 Jacobian[0][2]=Input->Time*cos(LKF->FriHea+atan((LENGTH_REAR*tan(LKF->FriStee))/LENGTH_CAR));
-	 Jacobian[0][3]=-(LKF->FriVel *LENGTH_CAR * Input->Time *sin(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR))*1/cos(LKF->FriStee)*cos(LKF->FriStee))/LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee);
-	 Jacobian[0][4]=-LKF->FriVel*sin(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR));
+	 Jacobian[0][3]=0;
+	 Jacobian[0][4]=-LKF->FriVelx*Input->Time*sin(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR));
+	 Jacobian[0][5]=-(LKF->FriVelx *LENGTH_CAR * Input->Time *sin(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR))*1/cos(LKF->FriStee)*cos(LKF->FriStee))/LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee);
 
 	 Jacobian[1][0]=0;
 	 Jacobian[1][1]=1;
-	 Jacobian[1][2]=Input->Time*sin(LKF->FriHea+atan((LENGTH_REAR*tan(LKF->FriStee))/LENGTH_CAR));
-	 Jacobian[1][3]=(LKF->FriVel *LENGTH_CAR * Input->Time *cos(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR))*1/cos(LKF->FriStee)*cos(LKF->FriStee))/LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee);
-	 Jacobian[1][4]=LKF->FriVel*sin(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR));
+	 Jacobian[1][2]=0;
+	 Jacobian[1][3]=Input->Time*sin(LKF->FriHea+atan((LENGTH_REAR*tan(LKF->FriStee))/LENGTH_CAR));
+	 Jacobian[1][4]=LKF->FriVely*sin(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR));
+	 Jacobian[1][5]=(LKF->FriVely *LENGTH_CAR * Input->Time *cos(LKF->FriHea+atan(LENGTH_REAR*tan(LKF->FriStee)/LENGTH_CAR))*1/cos(LKF->FriStee)*cos(LKF->FriStee))/LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee);
 
 	 Jacobian[2][0]=0;
 	 Jacobian[2][1]=0;
 	 Jacobian[2][2]=1;
 	 Jacobian[2][3]=0;
 	 Jacobian[2][4]=0;
+	 Jacobian[2][5]=0;
 
 	 Jacobian[3][0]=0;
 	 Jacobian[3][1]=0;
-	 Jacobian[3][2]=(Input->Time*tan(LKF->FriStee)*abs(LKF->FriStee))/(LKF->FriStee*sqrt(LKF->FriStee*LKF->FriStee+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee)));
-	 Jacobian[3][3]=(LKF->FriVel*LENGTH_CAR*LENGTH_CAR*LENGTH_CAR*Input->Time*(1/cos(LKF->FriStee)*1/cos(LKF->FriStee)))/(pow(LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee),1.5)*abs(LKF->FriStee));
-	 Jacobian[3][4]=1;
+	 Jacobian[3][2]=0;
+	 Jacobian[3][3]=1;
+	 Jacobian[3][4]=0;
+	 Jacobian[3][5]=0;
 
 	 Jacobian[4][0]=0;
 	 Jacobian[4][1]=0;
 	 Jacobian[4][2]=0;
-	 Jacobian[4][3]=1;
-	 Jacobian[4][4]=0;
+	 Jacobian[4][3]=(Input->Time*tan(LKF->FriStee)*fabs(LKF->FriStee))/(LKF->FriStee*sqrt(LKF->FriStee*LKF->FriStee+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee)));
+	 Jacobian[4][4]=1;
+	 Jacobian[4][5]=(LKF->FriVely*LENGTH_CAR*LENGTH_CAR*LENGTH_CAR*Input->Time*(1/cos(LKF->FriStee)*1/cos(LKF->FriStee)))/(pow(LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee),1.5)*fabs(LKF->FriStee));
 
-	 matrixMultiplication(Jacobian,LKF->Prediction_CovarianceFri, Mul_Result);
-	 transposeMatrix(Jacobian, Trans_Result);
-	 matrixMultiplication(Mul_Result,Trans_Result,LKF->Prediction_CovarianceNex); // Covaricaace result
+	 Jacobian[5][0]=0;
+	 Jacobian[5][1]=0;
+	 Jacobian[5][2]=0;
+	 Jacobian[5][3]=0;
+	 Jacobian[5][4]=0;
+	 Jacobian[5][5]=1;
+
+	 multiplyMatrices(Jacobian,LKF->Prediction_CovarianceFri, Mul_Result,6,6);
+	 transposeMatrix(Jacobian, Trans_Result,6,6);
+	 multiplyMatrices(Mul_Result,Trans_Result,LKF->Prediction_CovarianceNex,6,6);
+
+
+	 // Covaricaace result
+
 }
 void EFK_GPSHandleMeasurement(GPS *GPS, LKF *LKF ){
+	float GPSCovariance[2][2];
+	float GPSGetPos[2];
+	float Error[2];
+	float InovationCovariance[2][2];
+	float KalmanGain[6][6];
 
-	float MeasurementFri[2][2];
+	GPSCovariance[0][0]=GPS->GPSCovariance[0][0];
+	GPSCovariance[1][1]=GPS->GPSCovariance[1][1];
 
-	float Inovation[2][2];
-	float InovationCov[5][5];
+	GPSGetPos[0]=GPS->GPSGetPosition[0];
+	GPSGetPos[1]=GPS->GPSGetPosition[1];
 
-	float GPSMeasurement[2][2];
-	float GPSModel[2][5];
-	float GPSModelT[2][5];
-	float GPSCov[2][2];
+	//Error
+	Error[0]=GPSGetPos[0] - LKF->NexPx;
+	Error[1]=GPSGetPos[1] - LKF->NexPy;
+	//InovationCovarian
+	InovationCovariance[0][0]=LKF->Prediction_CovarianceNex[0][0] + GPSCovariance[0][0];
+	InovationCovariance[1][1]=LKF->Prediction_CovarianceNex[1][1]+  GPSCovariance[1][1];
+	//KalmanGain
+	KalmanGain[0][0]= LKF->Prediction_CovarianceNex[0][0]/(InovationCovariance[0][0]);
+	KalmanGain[1][1]=LKF->Prediction_CovarianceNex[1][1]/(InovationCovariance[1][1]);
+	//Update State
+	LKF->FriPx = LKF->NexPx + (KalmanGain[0][0] * Error[0]);
+	LKF->FriPy = LKF->NexPy + (KalmanGain[1][1] * Error[1]);
+	//Update Covariance
+	LKF->Prediction_CovarianceFri[0][0]= (GPSCovariance[0][0] / (InovationCovariance[0][0]))*LKF->Prediction_CovarianceNex[0][0];
+	LKF->Prediction_CovarianceFri[1][1]= (GPSCovariance[1][1] / (InovationCovariance[0][0]))*LKF->Prediction_CovarianceNex[1][1];
 
-	float PredictionNex[2][2];
-	float KalmanGian[2][2];
-	float Identity[2][2];
-//identity
-	 Identity[0][0]=1;
-	 Identity[1][1]=1;
-//GPS covariance
-	GPSCov[0][0]=GPS->GPSCovariance[0][0];
-	GPSCov[1][1]=GPS->GPSCovariance[1][1];
-//GPS measurement
-	GPSMeasurement[0][0]=GPS->GPSGetPosition[0][0];
-	GPSMeasurement[1][1]=GPS->GPSGetPosition[1][1];
-//GPS Modle
-
-	memset(GPSModel,0,sizeof(GPSModel));
-	GPSModel[0][0]=GPS->GPS_Model[0][0];
-	GPSModel[1][1]=GPS->GPS_Model[1][1];
-	transposeMatrix(GPSModel,GPSModelT);
-
-	//First Measurement
-	MeasurementFri[0][0]= LKF->FriPx;
-	MeasurementFri[1][1]= LKF->FriPy;
-	//prediction
-	PredictionNex[0][0]=LKF->Prediction_CovarianceNex[0][0];
-	PredictionNex[1][1]=LKF->Prediction_CovarianceNex[1][1];
-	//inovation
-	Inovation[0][0]= GPSMeasurement[0][0] - MeasurementFri[0][0];
-	Inovation[1][1]= GPSMeasurement[1][1] - MeasurementFri[1][1];
-	//inovation covariacne
-	InovationCov[0][0]= GPSModel[0][0] * PredictionNex[0][0]*GPSModelT[0][0];
-	InovationCov[1][1]= GPSModel[1][1] * PredictionNex[1][1]*GPSModelT[1][1];
-	InovationCov[0][0]=  InovationCov[0][0] +GPSCov[0][0];
-	InovationCov[1][1]=  InovationCov[1][1] + GPSCov[1][1];
-	//Kalman Gain
-	KalmanGian[0][0]=  PredictionNex[0][0] *  GPSModel[0][0] * InovationCov[0][0];
-	KalmanGian[1][1]=  PredictionNex[1][1] *  GPSModel[1][1] * InovationCov[1][1];
-	//update
-	LKF->FriPx = LKF->NexPx + (KalmanGian[0][0] * Inovation[0][0]);
-	LKF->FriPy = LKF->NexPy + (KalmanGian[1][1] * Inovation[1][1]);
-	//update covariance
-	LKF->Prediction_CovarianceFri[0][0]=(Identity[0][0]-(KalmanGian[0][0] * GPSModel[0][0]))*PredictionNex[0][0];
-	LKF->Prediction_CovarianceFri[1][1]=(Identity[1][1]-(KalmanGian[1][1] * GPSModel[1][1]))*PredictionNex[1][1];
 }
 
+void Heading_HandleMeasurement(LKF *LKF, Input *Input, Heading *Heading){
+	float 	 Jacobian[6];
+	float 	 Error;
+	float InovationCovariance;
+	float KalmanGain[6];
+
+			 Jacobian[0]=0;
+			 Jacobian[1]=0;
+			 Jacobian[2]=0;
+			 Jacobian[3]=(Input->Time*tan(LKF->FriStee)*fabs(LKF->FriStee))/(LKF->FriStee*sqrt(LKF->FriStee*LKF->FriStee+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee)));
+			 Jacobian[4]=1;
+			 Jacobian[5]=(LKF->FriVely*LENGTH_CAR*LENGTH_CAR*LENGTH_CAR*Input->Time*(1/cos(LKF->FriStee)*1/cos(LKF->FriStee)))/(pow(LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee),1.5)*fabs(LKF->FriStee));
+	Error= Heading->Yaw - LKF->NexHea;
+
+	InovationCovariance= (LKF->Prediction_CovarianceNex[0][0]* Jacobian[0]* Jacobian[0]) + (LKF->Prediction_CovarianceNex[3][3]* Jacobian[3]* Jacobian[3]) + (LKF->Prediction_CovarianceNex[4][4]* Jacobian[4]* Jacobian[4]) +(LKF->Prediction_CovarianceNex[1][1]* Jacobian[1]* Jacobian[1])+(LKF->Prediction_CovarianceNex[5][5]* Jacobian[5]* Jacobian[5]) + (LKF->Prediction_CovarianceNex[2][2]* Jacobian[2]* Jacobian[2])+ Heading->Covariane;
+
+	KalmanGain[0]= (LKF->Prediction_CovarianceNex[0][0]* Jacobian[0]/InovationCovariance);
+	KalmanGain[1]= (LKF->Prediction_CovarianceNex[1][1]* Jacobian[1]/InovationCovariance);
+	KalmanGain[2]= (LKF->Prediction_CovarianceNex[2][2]* Jacobian[2]/InovationCovariance);
+	KalmanGain[3]= (LKF->Prediction_CovarianceNex[3][3]* Jacobian[3]/InovationCovariance);
+	KalmanGain[4]= (LKF->Prediction_CovarianceNex[4][4]* Jacobian[4]/InovationCovariance);
+	KalmanGain[5]= (LKF->Prediction_CovarianceNex[5][5]* Jacobian[5]/InovationCovariance);
+
+	LKF->FriPx = LKF->NexPx + KalmanGain[0] * Error;
+	LKF->FriPy = LKF->NexPy + KalmanGain[1] * Error;
+	LKF->FriVelx = LKF->NexVelx + KalmanGain[2] * Error;
+	LKF->FriVely = LKF->NexVely + KalmanGain[3] * Error;
+	LKF->FriHea = LKF->NexHea + KalmanGain[4] * Error;
+	LKF->FriStee = LKF->NexStee + KalmanGain[5] * Error;
+}
+
+
+
+//void Heading_HandleMeasurement(LKF *LKF, Input *Input, Heading *Heading){
+//	float Jacobian[6][6];
+//	float JacobianT[6][6];
+//	float JacobianIn[6][6];
+//	float Inovation;
+//	float Measurement[6][6];
+//	float InovationCov[6][6];
+//	float InovationCovInv[6][6];
+//	float InovationResul[6][6];
+//	float KalmanGain[6][6];
+//	float KalmanGainb1[6][6];
+//	float resultb1[6][6];
+//	float resultb2[6][6];
+//	float Indentity[6][6];
+//	float KalmanGiansub[6][6];
+//	float CovarianceResult[6][6];
+//	float CovarianceResultb1[6][6];
+//
+//	Indentity[0][0]=1;
+//	Indentity[1][1]=1;
+//	Indentity[2][2]=1;
+//	Indentity[3][3]=1;
+//	Indentity[4][4]=1;
+//	Indentity[5][5]=1;
+//
+//		 Jacobian[0][0]=0;
+//		 Jacobian[0][1]=0;
+//		 Jacobian[0][2]=0;
+//		 Jacobian[0][3]=(Input->Time*tan(LKF->FriStee)*fabs(LKF->FriStee))/(LKF->FriStee*sqrt(LKF->FriStee*LKF->FriStee+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee)));
+//		 Jacobian[0][4]=1;
+//		 Jacobian[0][5]=(LKF->FriVely*LENGTH_CAR*LENGTH_CAR*LENGTH_CAR*Input->Time*(1/cos(LKF->FriStee)*1/cos(LKF->FriStee)))/(pow(LENGTH_CAR*LENGTH_CAR+LENGTH_REAR*LENGTH_REAR*tan(LKF->FriStee)*tan(LKF->FriStee),1.5)*fabs(LKF->FriStee));
+//
+//	Inovation = Heading->Yaw - LKF->NexHea;
+//
+//	matrixMultiplication(Jacobian, LKF->Prediction_CovarianceNex, resultb1);
+//	transposeMatrixNxN(Jacobian, JacobianT);
+//	matrixMultiplication(resultb1,JacobianT,InovationResul);
+//	addScalarToMatrix(6, 6, InovationResul,Heading->Covariane);
+//
+//
+//	matrixMultiplication(LKF->Prediction_CovarianceNex,JacobianT,KalmanGainb1);
+//
+//	inverseMatrix(Jacobian, JacobianIn);
+//
+//	matrixMultiplication(JacobianIn,KalmanGainb1,KalmanGain);
+//
+//	assignMatrix(KalmanGain, KalmanGiansub, 6, 6);
+//
+//	multiplyMatrixByScalar(KalmanGain, 6, 6, Inovation);
+//
+//	LKF->FriHea= LKF->NexHea + KalmanGain[0][5];
+//
+//	matrixMultiplication(KalmanGiansub, Jacobian, CovarianceResult);
+//
+//	subtractMatrices(Indentity, CovarianceResult, CovarianceResultb1, 6, 6);
+//
+//	matrixMultiplication(CovarianceResultb1, LKF->Prediction_CovarianceNex,  LKF->Prediction_CovarianceFri);
+//
+//}
