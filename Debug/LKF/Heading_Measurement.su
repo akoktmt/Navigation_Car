@@ -1,0 +1,2 @@
+../LKF/Heading_Measurement.c:12:6:Heading_Init	16	static
+../LKF/Heading_Measurement.c:17:6:Heading_HandleMeasurement	560	static

@@ -17,6 +17,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <EKF.h>
 #include "main.h"
 #include "usart.h"
 #include "gpio.h"
@@ -26,7 +27,6 @@
 #include "GPS.h"
 #include <stdint.h>
 #include "GPS_Handle.h"
-#include "LKF.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -100,12 +100,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
   Ringbuf_init();
   HAL_Delay(500);
-  GPS GPS;
-  LKF LKF;
+  //GPS GPS;
+  EKF EKF;
   Input Input;
   Angle Angle;
-  EKF_Init(&LKF,&Input);
-  GPS_Init(&GPS);
+  EKF_Init(&EKF,&Input);
+  //GPS_Init(&GPS);
 	//find covariance
   /* USER CODE END 2 */
 
@@ -138,10 +138,10 @@ int main(void)
 //	 		  HAL_UART_Transmit(&huart2,(uint8_t*) Buffer, sizeof(Buffer), HAL_MAX_DELAY);
 //	  }
 
-	  	 		  	  	  	  EKF_PredictionStep(&LKF,&Angle,&Input);
-	  	 					  EFK_GPSHandleMeasurement(&GPS,&LKF);
-	  	 					  sprintf (Buffer, "%.6f\r\n %.6f\r\n  " ,LKF.FriPx,
-	  	 							  LKF.FriPy);
+	  	 		  	  	  	  EKF_PredictionStep(&EKF,&Angle,&Input);
+	  	 					//  EFK_GPSHandleMeasurement(&GPS,&EKF);
+	  	 					  sprintf (Buffer, "%.6f\r\n %.6f\r\n  " ,EKF.FirPx,
+	  	 							  EKF.FirPy);
 	  	 					  HAL_UART_Transmit(&huart2,(uint8_t*) Buffer, sizeof(Buffer), HAL_MAX_DELAY);
 	  	 					  HAL_Delay(1000);
   }

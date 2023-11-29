@@ -1,0 +1,4 @@
+../LKF/EKFmath.c:9:6:assignMatrix	24	static
+../LKF/EKFmath.c:18:6:subtractMatrices	40	static
+../LKF/EKFmath.c:26:6:multiplyMatrices	48	static
+../LKF/EKFmath.c:37:6:transposeMatrix	32	static

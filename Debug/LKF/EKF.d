@@ -1,4 +1,4 @@
-Core/Src/main.o: ../Core/Src/main.c ../LKF/EKF.h ../Core/Inc/main.h \
+LKF/EKF.o: ../LKF/EKF.c ../LKF/EKF.h ../LKF/EKFmath.h ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -21,10 +21,9 @@ Core/Src/main.o: ../Core/Src/main.c ../LKF/EKF.h ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h \
- ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- ../Core/Inc/usart.h ../Core/Inc/main.h ../Core/Inc/gpio.h \
- ../GPS_Handle/GPS.h ../GPS_Handle/GPS_Handle.h
+ ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 ../LKF/EKF.h:
+../LKF/EKFmath.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 ../Core/Inc/stm32f1xx_hal_conf.h:
@@ -49,8 +48,3 @@ Core/Src/main.o: ../Core/Src/main.c ../LKF/EKF.h ../Core/Inc/main.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
-../Core/Inc/usart.h:
-../Core/Inc/main.h:
-../Core/Inc/gpio.h:
-../GPS_Handle/GPS.h:
-../GPS_Handle/GPS_Handle.h:
